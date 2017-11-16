@@ -14,6 +14,7 @@ import org.objectweb.asm.*;
  */
 public class ReflectSnake {
     public static JSONObject getMethodParamNames(final Method m) {
+        int length = m.getParameterTypes().length;
         JSONObject params = new JSONObject();
         final String n = m.getDeclaringClass().getName();
         ClassReader cr = null;
@@ -40,14 +41,14 @@ public class ReflectSnake {
                     @Override
                     public void visitLocalVariable(String name, String desc,
                                                    String signature, Label start, Label end, int index) {
+
                         int i = index - 1;
                         // 如果是静态方法，则第一就是参数
                         // 如果不是静态方法，则第一个是"this"，然后才是方法的参数
-
                         if (Modifier.isStatic(m.getModifiers())) {
                             i = index;
                         }
-                        if(i != -1){
+                        if (i >= 0 && i < length) {
                             String[] descarr = desc.split(";")[0].split("/");
                             System.out.println(index+" "+name);
                             params.put(name,descarr[descarr.length-1]);

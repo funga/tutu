@@ -14,6 +14,7 @@ public class UserController extends BaseController{
 
     @RequestMapping("/register")
     public String register(String nickname,String username,String mobile,String addr){
+        String aaa="hhhhh";
         JSONObject user = new JSONObject();
         user.put("昵称",nickname);
         user.put("登录名",username);
