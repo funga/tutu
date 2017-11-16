@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+    <title>接口调试台</title>
+    <meta name="context-path" th:content="${#httpServletRequest.getScheme() + '://' + #httpServletRequest.getServerName() + ':' + #httpServletRequest.getServerPort()  + #httpServletRequest.getContextPath() } "/>
+    <link rel="stylesheet" type="text/css" th:href="@{lib/layui/css/layui.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{lib/jsonview/jquery.jsonview.css}" />
+    <style>
+        .client-nav{
+            background: #393D49;
+            height: 60px;
+        }
+        .title{
+            font-size: 24px;
+            color: #FFFFFF;
+            line-height: 60px;
+        }
+        .content-view{
+            margin-top: 40px;
+        }
+        .api-item{
+            height: 30px;
+            line-height: 30px;
+            font-size: 16px;
+            color: #1E9FFF;
+        }
+        .api-item:hover{
+            font-size: 18px;
+            color: #393D49;
+            cursor: pointer;
+        }
+        #api-list .active{
+            font-size: 18px;
+            color: #5FB878;
+        }
+
+    </style>
+</head>
+<body>
+<nav class="client-nav">
+    <div class="layui-container">
+        <h1 class="title">接口调试台</h1>
+    </div>
+</nav>
+<div class="layui-container content-view">
+    <div class="layui-row">
+        <div class="layui-col-md4">
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend>环境与接口</legend>
+            </fieldset>
+            <div class="layui-field-box">
+                <form class="layui-form">
+                    <div class="layui-form-item">
+                        <select  lay-verify="required" lay-search="" id="domain">
+                            <option value="">请选择环境...</option>
+                            <option th:text="${#httpServletRequest.getScheme() + '://' + #httpServletRequest.getServerName() + ':' + #httpServletRequest.getServerPort()  + #httpServletRequest.getContextPath()}" th:value="${#httpServletRequest.getScheme() + '://' + #httpServletRequest.getServerName() + ':' + #httpServletRequest.getServerPort()  + #httpServletRequest.getContextPath()}"></option>
+                        </select>
+                    </div>
+                    <div class="layui-form-item">
+                        <select  lay-verify="required" lay-search="" id="modules" lay-filter="moduleFilter">
+                            <option value="">请选择接口类目...</option>
+                        </select>
+                    </div>
+                </form>
+                <ul class="layui-nav" id="api-list" style="min-height: 400px;background: #efefef">
+                    <!--<li class="api-item">/auth/login</li>-->
+                    <!--<li class="api-item active">/auth/logout</li>-->
+                </ul>
+            </div>
+
+        </div>
+        <div class="layui-col-md-offset1 layui-col-md7">
+            <fieldset class="layui-elem-field layui-field-title" >
+                <legend>请求与响应</legend>
+            </fieldset>
+                <form class="layui-form" id="param-list">
+                </form>
+            <div class="layui-form-item">
+                <div class="layui-input-block" id="button-list" style="text-align:right">
+                </div>
+            </div>
+            <fieldset class="layui-elem-field layui-field-title">
+                <legend id="api-url">响应结果</legend>
+                <div class="layui-field-box">
+                    <div style="margin-top: 20px;background: #efefef;min-height: 300px;padding: 10px;" id="result">
+                    </div>
+                </div>
+
+            </fieldset>
+
+
+        </div>
+    </div>
+</div>
+
+</body>
+
+<script th:src="@{js/jquery-3.2.1.min.js}"></script>
+<script th:src="@{lib/layui/layui.js}"></script>
+<script th:src="@{lib/jsonview/jquery.jsonview.js}"></script>
+<script th:inline="javascript">
+    var apiList = [[${api}]];
+    var apiJson = JSON.parse(apiList);
+    layui.use('form', function(){
+        var form = layui.form;
+        form.on('select(moduleFilter)', function(data){
+            $("#param-list").html("");
+            $("#button-list").html("");
+            var uri = data.value;
+            $("#api-list").html("");
+            $.each(apiJson[uri],function(key,value){
+                $("#api-list").append('<li class="api-item">'+key+'</li>');
+            });
+        });
+    });
+    $.each(JSON.parse(apiList),function (key,value) {
+        $("#modules").append("<option value="+key+">"+key+"</option>");
+    });
+
+    $(function(){
+        $("#api-list").on("click",".api-item",function(){
+            $('.api-item').removeClass("active");
+            $(this).addClass("active");
+            var module = $("#modules").val();
+            var uri = $(this).text();
+            var api = apiJson[module][uri];
+            var method = api.method;
+            $("#button-list").html("");
+            if(method == 'GET'){
+                $("#button-list").append('<button class="layui-btn layui-btn-normal" onclick="sendGet()">Get</button>');
+            }else if(method == "POST"){
+                $("#button-list").append('<button class="layui-btn layui-btn-normal" onclick="sendPost()">Post</button>');
+            }else{
+                $("#button-list").append('<button class="layui-btn layui-btn-normal" onclick="sendPost()">Post</button>');
+                $("#button-list").append('<button class="layui-btn layui-btn-normal" onclick="sendGet()">Get</button>');
+            }
+            $("#param-list").html("");
+            var n = 0;
+            var html = [];
+            $.each(api.param,function (key,value) {
+                if(n%2 == 0){
+
+                    html.push('<div class="layui-form-item">',
+                        '<div class="layui-inline">',
+                        '<label class="layui-form-label">',
+                        key,
+                        '</label>',
+                        '<div class="layui-input-inline">',
+                        '<input type="text" placeholder="'+value+'" class="layui-input" />',
+                        '</div>',
+                        '</div>');
+                }else {
+
+                    html.push('<div class="layui-inline">',
+                        '<label class="layui-form-label">',
+                        key,
+                        '</label>',
+                        '<div class="layui-input-inline">',
+                        '<input type="text" placeholder="'+value+'" class="layui-input"/>',
+                        '</div>',
+                        '</div>',
+                        '</div>');
+                }
+                n++;
+            });
+
+            var htmlcode = html.join("");
+
+            $("#param-list").append(htmlcode);
+
+        });
+    });
+
+    function sendPost() {
+        sendRequest("post");
+    }
+
+    function sendGet() {
+        sendRequest("get");
+    }
+
+    function sendRequest(method) {
+        var domain = $("#domain").val();
+        if(domain == ""){
+            layer.msg("请选择环境");
+            return false;
+        }
+        var uri = $(".active").text();
+        var params = {};
+        $.each($("#param-list .layui-inline"),function (index,obj) {
+            params[$(obj).find(".layui-form-label").text()] = $(obj).find(".layui-input").val()
+        });
+        $("#api-url").text(domain+uri);
+//        var json = {"hey": "guy","anumber": 243,"anobject": {"whoa": "nuts","anarray": [1,2,"sdd"], "more":"stuff"},"awesome": true,"bogus": false,"meaning": null, "japanese":"明日がある。", "link": "http://jsonview.com", "notLink": "http://jsonview.com is great"};
+//        $("#result").JSONView(json, { collapsed: true });
+
+        $.post("/execute",{"url":domain+uri,"method":method,"params":JSON.stringify(params)},function (json) {
+            if(json.code == 100){
+                $("#result").JSONView(JSON.parse(json.data), { collapsed: true });
+            }else{
+                $("#result").JSONView({});
+                layer.msg(json.msg);
+            }
+
+        },'json');
+    }
+
+</script>
+</html>
